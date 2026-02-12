@@ -31,6 +31,7 @@ If your GitHub client does not render inline video, open directly:
 - `scripts/codex-notify.sh` Codex notify-hook target (reads event payload, plays on turn-complete)
 - `scripts/codex-with-sound.sh` runs `codex "$@"` and then plays a completion sound
 - `scripts/doctor.sh` validates your local install and hook wiring
+- `scripts/uninstall.sh` removes this repo hook from Codex config
 
 ## Install (simple)
 
@@ -96,6 +97,32 @@ Useful helpers:
 ./scripts/set-theme.sh --list
 ./scripts/set-theme.sh --show
 ./scripts/play-theme-sound.sh
+```
+
+## Uninstall
+
+Remove this repo's notify hook from Codex:
+
+```bash
+./scripts/uninstall.sh
+```
+
+If your Codex config still points at an old repo location, remove that specific path:
+
+```bash
+./scripts/uninstall.sh --hook "/old/path/codex-lotr-bfme-notifications/scripts/codex-notify.sh"
+```
+
+Optional local cleanup (theme + cache files in this repo):
+
+```bash
+./scripts/uninstall.sh --purge-local
+```
+
+If you added a shell alias for wrapper mode, remove it:
+
+```bash
+unalias codexn 2>/dev/null
 ```
 
 ## Notes
