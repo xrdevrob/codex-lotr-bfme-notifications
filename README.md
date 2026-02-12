@@ -4,7 +4,7 @@ LOTR/BFME themed completion sounds for Codex runs.
 
 ## What this adds
 
-- Theme selection (`elves`, `men`, `dwarves`, `aragorn`, `legolas`)
+- Theme selection from actual folder hierarchy (`voices/<CATEGORY>/<UNIT_OR_HERO>`)
 - Random voice-line playback from `sounds-library/voices`
 - Native Codex notification-hook integration (`agent-turn-complete`) for per-turn sounds
 
@@ -26,7 +26,9 @@ chmod +x scripts/*.sh
 
 `setup.sh` does the following:
 
-- Lets you choose a theme
+- Uses an interactive arrow-key picker (Up/Down + Enter)
+- Lets you choose a category (for example `ELVEN UNITS`) and then a final folder (for example `Lorien Archers`)
+- Lets you go back from the final folder list to the category list
 - Primes the local sound cache
 - Installs the Codex `notify` hook in `~/.codex/config.toml` (idempotent)
 
@@ -38,13 +40,13 @@ codex "fix failing test in parser"
 
 No wrapper is required for normal use.
 
-## Theme mapping
+## Theme model
 
-- `elves` -> `voices/ELVEN HEROES` + `voices/ELVEN UNITS`
-- `men` -> `voices/MEN OF THE WEST HEROES` + `voices/MEN OF THE WEST UNITS`
-- `dwarves` -> `voices/DWARVEN HEROES` + `voices/DWARVEN UNITS`
-- `aragorn` -> `voices/MEN OF THE WEST HEROES/Aragorn`
-- `legolas` -> `voices/ELVEN HEROES/Legolas`
+- Preferred theme format is folder-based, for example:
+  - `ELVEN UNITS/Lorien Archers`
+  - `DWARVEN HEROES/Gimli`
+- Legacy aliases are still supported for compatibility:
+  - `elves`, `men`, `dwarves`, `aragorn`, `legolas`
 
 ## Notes
 

@@ -4,10 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 THEME_FILE="$ROOT_DIR/.codex-theme"
 CACHE_DIR="$ROOT_DIR/.codex-cache"
+VOICES_DIR="$ROOT_DIR/sounds-library/voices"
 OS_NAME="$(uname -s 2>/dev/null || echo unknown)"
 
 usage() {
-  cat <<'EOF'
+  cat <<'EOF_USAGE'
 Usage:
   play-theme-sound.sh [theme]
   play-theme-sound.sh --list
@@ -16,24 +17,54 @@ Usage:
 
 Plays a random sound bite from the selected theme.
 If [theme] is omitted, the value in .codex-theme is used.
-EOF
+
+Themes can be legacy aliases (elves, men, dwarves, aragorn, legolas)
+or folder paths like: ELVEN UNITS/Lorien Archers
+EOF_USAGE
 }
 
-list_themes() {
-  cat <<'EOF'
+legacy_themes() {
+  cat <<'EOF_LEGACY'
 elves
 men
 dwarves
 aragorn
 legolas
-EOF
+EOF_LEGACY
 }
 
-theme_exists() {
-  case "$1" in
-    elves|men|dwarves|aragorn|legolas) return 0 ;;
-    *) return 1 ;;
-  esac
+list_folder_themes() {
+  if [[ ! -d "$VOICES_DIR" ]]; then
+    return 1
+  fi
+
+  find "$VOICES_DIR" -mindepth 2 -maxdepth 2 -type d -print \
+    | sed "s#^$VOICES_DIR/##" \
+    | sort
+}
+
+list_themes() {
+  echo "# legacy"
+  legacy_themes
+  echo
+  echo "# folders"
+  list_folder_themes || true
+}
+
+read_stored_theme() {
+  local value=""
+
+  if [[ -f "$THEME_FILE" ]]; then
+    IFS= read -r value <"$THEME_FILE" || true
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ -n "$value" ]]; then
+      printf '%s\n' "$value"
+      return
+    fi
+  fi
+
+  printf 'elves\n'
 }
 
 resolve_theme() {
@@ -42,44 +73,73 @@ resolve_theme() {
     return
   fi
 
-  if [[ -f "$THEME_FILE" ]]; then
-    tr -d '[:space:]' <"$THEME_FILE"
-    return
-  fi
-
-  printf 'elves\n'
+  read_stored_theme
 }
 
 theme_dirs() {
   local theme="$1"
+
   case "$theme" in
     elves)
       printf '%s\n' \
-        "$ROOT_DIR/sounds-library/voices/ELVEN HEROES" \
-        "$ROOT_DIR/sounds-library/voices/ELVEN UNITS"
+        "$VOICES_DIR/ELVEN HEROES" \
+        "$VOICES_DIR/ELVEN UNITS"
+      return 0
       ;;
     men)
       printf '%s\n' \
-        "$ROOT_DIR/sounds-library/voices/MEN OF THE WEST HEROES" \
-        "$ROOT_DIR/sounds-library/voices/MEN OF THE WEST UNITS"
+        "$VOICES_DIR/MEN OF THE WEST HEROES" \
+        "$VOICES_DIR/MEN OF THE WEST UNITS"
+      return 0
       ;;
     dwarves)
       printf '%s\n' \
-        "$ROOT_DIR/sounds-library/voices/DWARVEN HEROES" \
-        "$ROOT_DIR/sounds-library/voices/DWARVEN UNITS"
+        "$VOICES_DIR/DWARVEN HEROES" \
+        "$VOICES_DIR/DWARVEN UNITS"
+      return 0
       ;;
     aragorn)
-      printf '%s\n' \
-        "$ROOT_DIR/sounds-library/voices/MEN OF THE WEST HEROES/Aragorn"
+      printf '%s\n' "$VOICES_DIR/MEN OF THE WEST HEROES/Aragorn"
+      return 0
       ;;
     legolas)
-      printf '%s\n' \
-        "$ROOT_DIR/sounds-library/voices/ELVEN HEROES/Legolas"
-      ;;
-    *)
-      return 1
+      printf '%s\n' "$VOICES_DIR/ELVEN HEROES/Legolas"
+      return 0
       ;;
   esac
+
+  if [[ -d "$VOICES_DIR/$theme" ]]; then
+    printf '%s\n' "$VOICES_DIR/$theme"
+    return 0
+  fi
+
+  return 1
+}
+
+theme_exists() {
+  local theme="$1"
+  theme_dirs "$theme" >/dev/null 2>&1
+}
+
+theme_cache_key() {
+  local theme="$1"
+
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$theme" | shasum -a 1 | awk '{print $1}'
+    return
+  fi
+
+  if command -v md5sum >/dev/null 2>&1; then
+    printf '%s' "$theme" | md5sum | awk '{print $1}'
+    return
+  fi
+
+  if command -v md5 >/dev/null 2>&1; then
+    md5 -q -s "$theme"
+    return
+  fi
+
+  printf '%s' "$theme" | cksum | awk '{print $1}'
 }
 
 available_players() {
@@ -124,11 +184,11 @@ hash_file() {
 }
 
 converted_file_for_source() {
-  local theme="$1"
+  local theme_key="$1"
   local source_file="$2"
   local file_hash
   file_hash="$(hash_file "$source_file")"
-  printf '%s\n' "$CACHE_DIR/converted/$theme/$file_hash.wav"
+  printf '%s\n' "$CACHE_DIR/converted/$theme_key/$file_hash.wav"
 }
 
 ensure_converted_pcm() {
@@ -168,11 +228,11 @@ ffplay_with_validation() {
 play_file() {
   local player="$1"
   local file="$2"
-  local theme="$3"
+  local theme_key="$3"
   local converted
   case "$player" in
     afplay_pcm)
-      converted="$(converted_file_for_source "$theme" "$file")"
+      converted="$(converted_file_for_source "$theme_key" "$file")"
       ensure_converted_pcm "$file" "$converted" || return 1
       afplay "$converted" >/dev/null 2>&1
       ;;
@@ -198,7 +258,10 @@ play_file() {
 }
 
 cache_file_for_theme() {
-  printf '%s\n' "$CACHE_DIR/candidates-$1.txt"
+  local theme="$1"
+  local theme_key
+  theme_key="$(theme_cache_key "$theme")"
+  printf '%s\n' "$CACHE_DIR/candidates-$theme_key.txt"
 }
 
 build_candidates_raw() {
@@ -320,7 +383,7 @@ done
 THEME="$(resolve_theme "$THEME_ARG")"
 if ! theme_exists "$THEME"; then
   echo "Unknown theme: $THEME" >&2
-  echo "Valid themes: $(list_themes | tr '\n' ',' | sed 's/,$//')" >&2
+  echo "Run: $0 --list" >&2
   exit 1
 fi
 
@@ -343,6 +406,7 @@ fi
 
 echo "Theme: $THEME" >&2
 
+THEME_CACHE_KEY="$(theme_cache_key "$THEME")"
 MAX_ATTEMPTS=8
 ATTEMPT=1
 while [[ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]]; do
@@ -356,7 +420,7 @@ while [[ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]]; do
   fi
 
   while IFS= read -r player; do
-    if [[ -n "$player" ]] && play_file "$player" "$CHOSEN_FILE" "$THEME"; then
+    if [[ -n "$player" ]] && play_file "$player" "$CHOSEN_FILE" "$THEME_CACHE_KEY"; then
       if [[ "$ATTEMPT" -gt 1 ]]; then
         echo "Playing fallback: ${CHOSEN_FILE#$ROOT_DIR/}" >&2
       fi

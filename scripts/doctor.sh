@@ -61,13 +61,6 @@ has_command() {
   command -v "$1" >/dev/null 2>&1
 }
 
-valid_theme() {
-  case "$1" in
-    elves|men|dwarves|aragorn|legolas) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 detect_player() {
   if has_command afplay; then
     printf 'afplay\n'
@@ -114,10 +107,10 @@ theme="elves"
 if [[ -x "$SET_THEME" ]]; then
   theme="$($SET_THEME --show 2>/dev/null || echo "elves")"
 elif [[ -f "$THEME_FILE" ]]; then
-  theme="$(tr -d '[:space:]' <"$THEME_FILE")"
+  IFS= read -r theme <"$THEME_FILE" || true
 fi
 
-if valid_theme "$theme"; then
+if "$PLAY_SOUND" --prime-cache "$theme" >/dev/null 2>&1; then
   ok "theme is valid ($theme)"
 else
   fail "theme is invalid ($theme). Run: $SET_THEME --list"

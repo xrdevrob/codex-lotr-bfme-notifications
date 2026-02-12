@@ -6,15 +6,8 @@ SET_THEME="$ROOT_DIR/scripts/set-theme.sh"
 PLAY_SOUND="$ROOT_DIR/scripts/play-theme-sound.sh"
 CODEX_WRAP="$ROOT_DIR/scripts/codex-with-sound.sh"
 NOTIFY_SCRIPT="$ROOT_DIR/scripts/codex-notify.sh"
+VOICES_DIR="$ROOT_DIR/sounds-library/voices"
 CODEX_CONFIG_FILE="${CODEX_CONFIG_FILE:-$HOME/.codex/config.toml}"
-
-themes=(
-  "elves"
-  "men"
-  "dwarves"
-  "aragorn"
-  "legolas"
-)
 
 ensure_notify_hook() {
   local config_file="$1"
@@ -93,32 +86,179 @@ PY
   echo "added"
 }
 
+list_child_dirs() {
+  local parent="$1"
+  find "$parent" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | sort
+}
+
+choose_option_arrow() {
+  local title="$1"
+  shift
+  local -a options=("$@")
+  local selected=0
+  local key=""
+  local extra=""
+  local i
+
+  if [[ ${#options[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  echo "$title" >&2
+  echo "Use Up/Down arrows and Enter." >&2
+
+  while true; do
+    for i in "${!options[@]}"; do
+      if (( i == selected )); then
+        echo "  > ${options[i]}" >&2
+      else
+        echo "    ${options[i]}" >&2
+      fi
+    done
+
+    IFS= read -rsn1 key
+    if [[ "$key" == $'\x1b' ]]; then
+      IFS= read -rsn2 extra || true
+      key+="$extra"
+    fi
+
+    case "$key" in
+      $'\x1b[A')
+        selected=$(( (selected - 1 + ${#options[@]}) % ${#options[@]} ))
+        ;;
+      $'\x1b[B')
+        selected=$(( (selected + 1) % ${#options[@]} ))
+        ;;
+      ""|$'\n'|$'\r')
+        printf '\033[%dA' "${#options[@]}" >&2
+        printf '\033[J' >&2
+        echo "  Selected: ${options[selected]}" >&2
+        echo >&2
+        printf '%s\n' "$selected"
+        return 0
+        ;;
+      *)
+        ;;
+    esac
+
+    printf '\033[%dA' "${#options[@]}" >&2
+  done
+}
+
+choose_option_numeric() {
+  local title="$1"
+  shift
+  local -a options=("$@")
+  local input=""
+  local option
+  local i
+
+  if [[ ${#options[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  echo "$title" >&2
+  i=1
+  for option in "${options[@]}"; do
+    echo "  $i) $option" >&2
+    i=$((i + 1))
+  done
+  echo >&2
+
+  while [[ -z "$input" ]]; do
+    read -r -p "Enter number (1-${#options[@]}): " input
+    if [[ ! "$input" =~ ^[0-9]+$ ]] || (( input < 1 || input > ${#options[@]} )); then
+      echo "Invalid selection. Try again." >&2
+      input=""
+    fi
+  done
+
+  echo >&2
+  printf '%s\n' "$((input - 1))"
+}
+
+choose_option_index() {
+  local title="$1"
+  shift
+  local -a options=("$@")
+
+  if [[ -t 0 && -t 2 ]]; then
+    choose_option_arrow "$title" "${options[@]}"
+  else
+    choose_option_numeric "$title" "${options[@]}"
+  fi
+}
+
+pick_theme_from_folders() {
+  local -a groups=()
+  local -a leaves=()
+  local -a labels=()
+  local group_dir
+  local leaf_dir
+  local selection_idx
+  local back_idx
+
+  while IFS= read -r group_dir; do
+    [[ -n "$group_dir" ]] && groups+=("$group_dir")
+  done < <(list_child_dirs "$VOICES_DIR")
+
+  if [[ ${#groups[@]} -eq 0 ]]; then
+    echo "No voice category folders found under: $VOICES_DIR" >&2
+    return 1
+  fi
+
+  while true; do
+    labels=()
+    for group_dir in "${groups[@]}"; do
+      labels+=("$(basename "$group_dir")")
+    done
+
+    selection_idx="$(choose_option_index "Choose a voice category:" "${labels[@]}")"
+    group_dir="${groups[selection_idx]}"
+
+    leaves=()
+    while IFS= read -r leaf_dir; do
+      [[ -n "$leaf_dir" ]] && leaves+=("$leaf_dir")
+    done < <(list_child_dirs "$group_dir")
+
+    if [[ ${#leaves[@]} -eq 0 ]]; then
+      printf '%s\n' "${group_dir#"$VOICES_DIR/"}"
+      return 0
+    fi
+
+    labels=()
+    for leaf_dir in "${leaves[@]}"; do
+      labels+=("$(basename "$leaf_dir")")
+    done
+    labels+=("Back")
+    back_idx=${#leaves[@]}
+
+    selection_idx="$(choose_option_index "Choose a voice folder in $(basename "$group_dir"):" "${labels[@]}")"
+    if (( selection_idx == back_idx )); then
+      continue
+    fi
+
+    leaf_dir="${leaves[selection_idx]}"
+    printf '%s\n' "${leaf_dir#"$VOICES_DIR/"}"
+    return 0
+  done
+}
+
 echo "Codex LOTR Sound Setup"
 echo
 echo "This wizard sets your notification theme for task completion."
 echo
 
-current_theme="$("$SET_THEME" --show 2>/dev/null || echo "elves")"
+if [[ ! -d "$VOICES_DIR" ]]; then
+  echo "Voices folder not found: $VOICES_DIR" >&2
+  exit 1
+fi
+
+current_theme="$($SET_THEME --show 2>/dev/null || echo "elves")"
 echo "Current theme: $current_theme"
 echo
 
-echo "Choose a theme:"
-i=1
-for t in "${themes[@]}"; do
-  echo "  $i) $t"
-  i=$((i + 1))
-done
-echo
-
-choice=""
-while [[ -z "$choice" ]]; do
-  read -r -p "Enter number (1-${#themes[@]}): " input
-  if [[ "$input" =~ ^[0-9]+$ ]] && (( input >= 1 && input <= ${#themes[@]} )); then
-    choice="${themes[input-1]}"
-  else
-    echo "Invalid selection. Try again."
-  fi
-done
+choice="$(pick_theme_from_folders)"
 
 "$SET_THEME" "$choice"
 if "$PLAY_SOUND" --prime-cache "$choice" >/dev/null 2>&1; then
