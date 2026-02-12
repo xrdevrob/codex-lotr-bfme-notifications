@@ -87,4 +87,6 @@ unalias codexn 2>/dev/null
 - Theme is stored in `.codex-theme`.
 - Cache/logs are in `.codex-cache/`.
 - macOS uses `afplay`; Linux supports `paplay`, `aplay`, or `play`.
+- Volume is controlled by `CODEX_SOUND_VOLUME` (`0.0` to `1.0`, default `0.35`).
+- Example quieter test: `CODEX_SOUND_VOLUME=0.30 ./scripts/play-theme-sound.sh`.
 - For verbose playback troubleshooting: `CODEX_SOUND_DEBUG=1 ./scripts/play-theme-sound.sh`.

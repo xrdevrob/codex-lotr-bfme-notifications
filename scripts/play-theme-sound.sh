@@ -6,6 +6,7 @@ THEME_FILE="$ROOT_DIR/.codex-theme"
 CACHE_DIR="$ROOT_DIR/.codex-cache"
 VOICES_DIR="$ROOT_DIR/sounds-library/voices"
 OS_NAME="$(uname -s 2>/dev/null || echo unknown)"
+DEFAULT_SOUND_VOLUME="0.35"
 
 usage() {
   cat <<'EOF_USAGE'
@@ -136,6 +137,29 @@ available_players() {
   fi
 }
 
+is_valid_volume() {
+  local value="$1"
+  awk -v value="$value" '
+    BEGIN {
+      if (value ~ /^([0-9]+([.][0-9]+)?|[.][0-9]+)$/ && value >= 0 && value <= 1) {
+        exit 0
+      }
+      exit 1
+    }
+  '
+}
+
+resolve_sound_volume() {
+  local raw_value="${CODEX_SOUND_VOLUME:-$DEFAULT_SOUND_VOLUME}"
+
+  if ! is_valid_volume "$raw_value"; then
+    echo "Invalid CODEX_SOUND_VOLUME: $raw_value (expected 0.0 to 1.0)." >&2
+    raw_value="$DEFAULT_SOUND_VOLUME"
+  fi
+
+  awk -v value="$raw_value" 'BEGIN { printf "%.3f\n", value }'
+}
+
 hash_file() {
   local file="$1"
   if command -v md5 >/dev/null 2>&1; then
@@ -175,7 +199,7 @@ ffplay_with_validation() {
   local rc
 
   err_file="$(mktemp "${TMPDIR:-/tmp}/codex-ffplay.XXXXXX")"
-  ffplay -nodisp -autoexit -loglevel error "$file" >/dev/null 2>"$err_file"
+  ffplay -nodisp -autoexit -loglevel error -volume "$FFPLAY_VOLUME" "$file" >/dev/null 2>"$err_file"
   rc=$?
 
   if grep -qiE 'audio open failed|failed to open file|no more combinations' "$err_file"; then
@@ -200,22 +224,22 @@ play_file() {
     afplay_pcm)
       converted="$(converted_file_for_source "$theme_key" "$file")"
       ensure_converted_pcm "$file" "$converted" || return 1
-      afplay "$converted" >/dev/null 2>&1
+      afplay -v "$SOUND_VOLUME" "$converted" >/dev/null 2>&1
       ;;
     ffplay)
       ffplay_with_validation "$file"
       ;;
     afplay)
-      afplay "$file" >/dev/null 2>&1
+      afplay -v "$SOUND_VOLUME" "$file" >/dev/null 2>&1
       ;;
     paplay)
-      paplay "$file" >/dev/null 2>&1
+      paplay --volume="$PAPLAY_VOLUME" "$file" >/dev/null 2>&1
       ;;
     aplay)
       aplay "$file" >/dev/null 2>&1
       ;;
     play)
-      play -q "$file" >/dev/null 2>&1
+      play -q -v "$SOUND_VOLUME" "$file" >/dev/null 2>&1
       ;;
     *)
       return 1
@@ -370,7 +394,12 @@ if [[ -z "$PLAYERS" ]]; then
   exit 1
 fi
 
+SOUND_VOLUME="$(resolve_sound_volume)"
+FFPLAY_VOLUME="$(awk -v value="$SOUND_VOLUME" 'BEGIN { printf "%.0f\n", value * 100 }')"
+PAPLAY_VOLUME="$(awk -v value="$SOUND_VOLUME" 'BEGIN { printf "%.0f\n", value * 65536 }')"
+
 echo "Theme: $THEME" >&2
+echo "Volume: $SOUND_VOLUME" >&2
 
 THEME_CACHE_KEY="$(theme_cache_key "$THEME")"
 MAX_ATTEMPTS=8
