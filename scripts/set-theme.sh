@@ -13,20 +13,9 @@ Usage:
   set-theme.sh --list
   set-theme.sh --list-groups
 
-`<theme>` can be:
-- a legacy alias: elves, men, dwarves, aragorn, legolas
-- a folder theme path like: ELVEN UNITS/Lorien Archers
+`<theme>` must be a folder theme path like:
+- ELVEN UNITS/Lorien Archers
 EOF_USAGE
-}
-
-legacy_themes() {
-  cat <<'EOF_LEGACY'
-elves
-men
-dwarves
-aragorn
-legolas
-EOF_LEGACY
 }
 
 list_groups() {
@@ -50,11 +39,17 @@ list_folder_themes() {
 }
 
 list_themes() {
-  echo "# legacy"
-  legacy_themes
-  echo
-  echo "# folders"
   list_folder_themes || true
+}
+
+default_theme() {
+  local theme
+  theme="$(list_folder_themes | head -n1 || true)"
+  if [[ -n "$theme" ]]; then
+    printf '%s\n' "$theme"
+    return 0
+  fi
+  return 1
 }
 
 read_stored_theme() {
@@ -65,25 +60,17 @@ read_stored_theme() {
     # Trim only leading/trailing whitespace, keep internal spaces.
     value="${value#"${value%%[![:space:]]*}"}"
     value="${value%"${value##*[![:space:]]}"}"
-    if [[ -n "$value" ]]; then
+    if [[ -n "$value" && -d "$VOICES_DIR/$value" ]]; then
       printf '%s\n' "$value"
       return
     fi
   fi
 
-  printf 'elves\n'
+  default_theme || true
 }
 
 theme_exists() {
-  local theme="$1"
-
-  case "$theme" in
-    elves|men|dwarves|aragorn|legolas)
-      return 0
-      ;;
-  esac
-
-  [[ -d "$VOICES_DIR/$theme" ]]
+  [[ -d "$VOICES_DIR/$1" ]]
 }
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || $# -eq 0 ]]; then

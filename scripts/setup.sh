@@ -254,7 +254,10 @@ if [[ ! -d "$VOICES_DIR" ]]; then
   exit 1
 fi
 
-current_theme="$($SET_THEME --show 2>/dev/null || echo "elves")"
+current_theme="$($SET_THEME --show 2>/dev/null || true)"
+if [[ -z "$current_theme" ]]; then
+  current_theme="<not set>"
+fi
 echo "Current theme: $current_theme"
 echo
 

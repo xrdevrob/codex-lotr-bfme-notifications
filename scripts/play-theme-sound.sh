@@ -18,19 +18,8 @@ Usage:
 Plays a random sound bite from the selected theme.
 If [theme] is omitted, the value in .codex-theme is used.
 
-Themes can be legacy aliases (elves, men, dwarves, aragorn, legolas)
-or folder paths like: ELVEN UNITS/Lorien Archers
+Themes must be folder paths like: ELVEN UNITS/Lorien Archers
 EOF_USAGE
-}
-
-legacy_themes() {
-  cat <<'EOF_LEGACY'
-elves
-men
-dwarves
-aragorn
-legolas
-EOF_LEGACY
 }
 
 list_folder_themes() {
@@ -44,11 +33,17 @@ list_folder_themes() {
 }
 
 list_themes() {
-  echo "# legacy"
-  legacy_themes
-  echo
-  echo "# folders"
   list_folder_themes || true
+}
+
+default_theme() {
+  local theme
+  theme="$(list_folder_themes | head -n1 || true)"
+  if [[ -n "$theme" ]]; then
+    printf '%s\n' "$theme"
+    return 0
+  fi
+  return 1
 }
 
 read_stored_theme() {
@@ -58,13 +53,13 @@ read_stored_theme() {
     IFS= read -r value <"$THEME_FILE" || true
     value="${value#"${value%%[![:space:]]*}"}"
     value="${value%"${value##*[![:space:]]}"}"
-    if [[ -n "$value" ]]; then
+    if [[ -n "$value" && -d "$VOICES_DIR/$value" ]]; then
       printf '%s\n' "$value"
       return
     fi
   fi
 
-  printf 'elves\n'
+  default_theme || true
 }
 
 resolve_theme() {
@@ -78,35 +73,6 @@ resolve_theme() {
 
 theme_dirs() {
   local theme="$1"
-
-  case "$theme" in
-    elves)
-      printf '%s\n' \
-        "$VOICES_DIR/ELVEN HEROES" \
-        "$VOICES_DIR/ELVEN UNITS"
-      return 0
-      ;;
-    men)
-      printf '%s\n' \
-        "$VOICES_DIR/MEN OF THE WEST HEROES" \
-        "$VOICES_DIR/MEN OF THE WEST UNITS"
-      return 0
-      ;;
-    dwarves)
-      printf '%s\n' \
-        "$VOICES_DIR/DWARVEN HEROES" \
-        "$VOICES_DIR/DWARVEN UNITS"
-      return 0
-      ;;
-    aragorn)
-      printf '%s\n' "$VOICES_DIR/MEN OF THE WEST HEROES/Aragorn"
-      return 0
-      ;;
-    legolas)
-      printf '%s\n' "$VOICES_DIR/ELVEN HEROES/Legolas"
-      return 0
-      ;;
-  esac
 
   if [[ -d "$VOICES_DIR/$theme" ]]; then
     printf '%s\n' "$VOICES_DIR/$theme"
