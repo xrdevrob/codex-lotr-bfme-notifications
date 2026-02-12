@@ -48,6 +48,30 @@ No wrapper is required for normal use.
 - Legacy aliases are still supported for compatibility:
   - `elves`, `men`, `dwarves`, `aragorn`, `legolas`
 
+## Change theme later
+
+From a fresh terminal:
+
+```bash
+cd /Users/rob/Developer/codex-lotr-bfme-notifications
+./scripts/setup.sh
+```
+
+Direct set (without the wizard):
+
+```bash
+./scripts/set-theme.sh "ELVEN UNITS/Lorien Archers"
+```
+
+Useful helpers:
+
+```bash
+./scripts/set-theme.sh --list-groups
+./scripts/set-theme.sh --list
+./scripts/set-theme.sh --show
+./scripts/play-theme-sound.sh
+```
+
 ## Notes
 
 - Current theme is stored in `.codex-theme` at repo root.
