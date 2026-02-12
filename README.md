@@ -1,5 +1,7 @@
 # codex-lotr-bfme-notifications
 
+![Orks banner](media/orks.jpg)
+
 LOTR/BFME-themed sound notifications for Codex turn completion.
 
 ## Quick Start
