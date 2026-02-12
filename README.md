@@ -8,6 +8,21 @@ LOTR/BFME themed completion sounds for Codex runs.
 - Random voice-line playback from `sounds-library/voices`
 - Native Codex notification-hook integration (`agent-turn-complete`) for per-turn sounds
 
+## Quick Sound Previews
+
+Lorien Warriors:
+
+https://github.com/xrdevrob/codex-lotr-bfme-notifications/raw/refs/heads/main/sounds-library/readme-samples/lorien-warriors-preview.mp4
+
+Catapult:
+
+https://github.com/xrdevrob/codex-lotr-bfme-notifications/raw/refs/heads/main/sounds-library/readme-samples/dwarven-catapult-preview.mp4
+
+If your GitHub client does not render inline video, open directly:
+
+- [Lorien Warriors preview](sounds-library/readme-samples/lorien-warriors-preview.mp4)
+- [Catapult preview](sounds-library/readme-samples/dwarven-catapult-preview.mp4)
+
 ## Scripts
 
 - `scripts/setup.sh` interactive wizard for first-time setup
