@@ -1,161 +1,88 @@
 # codex-lotr-bfme-notifications
 
-LOTR/BFME themed completion sounds for Codex runs.
+LOTR/BFME-themed sound notifications for Codex turn completion.
 
-## What this adds
-
-- Theme selection from actual folder hierarchy (`voices/<CATEGORY>/<UNIT_OR_HERO>`)
-- Random voice-line playback from `sounds-library/voices`
-- Native Codex notification-hook integration (`agent-turn-complete`) for per-turn sounds
-
-## Quick Sound Previews
-
-Lorien Warriors:
-
-https://github.com/xrdevrob/codex-lotr-bfme-notifications/raw/refs/heads/main/sounds-library/readme-samples/lorien-warriors-preview.mp4
-
-Catapult:
-
-https://github.com/xrdevrob/codex-lotr-bfme-notifications/raw/refs/heads/main/sounds-library/readme-samples/dwarven-catapult-preview.mp4
-
-If your GitHub client does not render inline video, open directly:
-
-- [Lorien Warriors preview](sounds-library/readme-samples/lorien-warriors-preview.mp4)
-- [Catapult preview](sounds-library/readme-samples/dwarven-catapult-preview.mp4)
-
-## Scripts
-
-- `scripts/setup.sh` interactive wizard for first-time setup
-- `scripts/set-theme.sh` sets or shows the current theme
-- `scripts/play-theme-sound.sh` plays one random bite from the current theme
-- `scripts/codex-notify.sh` Codex notify-hook target (reads event payload, plays on turn-complete)
-- `scripts/codex-with-sound.sh` runs `codex "$@"` and then plays a completion sound
-- `scripts/doctor.sh` validates your local install and hook wiring
-- `scripts/uninstall.sh` removes this repo hook from Codex config
-
-## Install (simple)
-
-1. Open a fresh terminal and go to this repo:
+## Quick Start
 
 ```bash
 cd /path/to/codex-lotr-bfme-notifications
-```
-
-2. Run setup:
-
-```bash
 ./scripts/setup.sh
+codex "your prompt"
 ```
 
-If you see `permission denied`, run:
+If you hit `permission denied`:
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/setup.sh
 ```
 
-3. In the wizard:
-- Use Up/Down arrows
-- Press Enter to select
-- Pick a category (example: `ELVEN UNITS`)
-- Pick a voice folder (example: `Lorien Archers`)
-- Use `Back` if you want to return to category selection
-
-4. Run Codex normally:
+## Common Commands
 
 ```bash
-codex "your prompt"
-```
-
-No wrapper is required.
-
-## Theme model
-
-- Theme format is folder-based, for example:
-  - `ELVEN UNITS/Lorien Archers`
-  - `DWARVEN HEROES/Gimli`
-
-## Change theme later
-
-From a fresh terminal:
-
-```bash
-cd /path/to/codex-lotr-bfme-notifications
+# Re-run interactive theme picker
 ./scripts/setup.sh
-```
 
-Direct set (without the wizard):
-
-```bash
+# Set a theme directly
 ./scripts/set-theme.sh "ELVEN UNITS/Lorien Archers"
-```
 
-Useful helpers:
-
-```bash
+# Show or list themes
+./scripts/set-theme.sh --show
 ./scripts/set-theme.sh --list-groups
 ./scripts/set-theme.sh --list
-./scripts/set-theme.sh --show
+
+# Play one sample now
 ./scripts/play-theme-sound.sh
+
+# Diagnostics
+./scripts/doctor.sh --quick
 ```
 
 ## Uninstall
 
-Remove this repo's notify hook from Codex:
+Remove this repo's Codex notify hook:
 
 ```bash
 ./scripts/uninstall.sh
 ```
 
-If your Codex config still points at an old repo location, remove that specific path:
+If Codex config still references an old repo path:
 
 ```bash
 ./scripts/uninstall.sh --hook "/old/path/codex-lotr-bfme-notifications/scripts/codex-notify.sh"
 ```
 
-Optional local cleanup (theme + cache files in this repo):
+Also remove local theme/cache files:
 
 ```bash
 ./scripts/uninstall.sh --purge-local
 ```
 
-If you added a shell alias for wrapper mode, remove it:
+If you added a wrapper alias:
 
 ```bash
 unalias codexn 2>/dev/null
 ```
 
+## How It Works
+
+- `scripts/setup.sh` sets your theme and adds `scripts/codex-notify.sh` to `~/.codex/config.toml` `notify`.
+- On `agent-turn-complete`, Codex runs the hook and one random clip plays from the current theme.
+- No daemon or background service is required.
+
+## Scripts
+
+- `scripts/setup.sh`: first-time setup and theme picker
+- `scripts/set-theme.sh`: set/show/list themes
+- `scripts/play-theme-sound.sh`: play one random clip
+- `scripts/codex-notify.sh`: Codex notify hook target
+- `scripts/codex-with-sound.sh`: optional wrapper mode (play once when Codex exits)
+- `scripts/doctor.sh`: installation/config checks
+- `scripts/uninstall.sh`: remove this repo hook from Codex config
+
 ## Notes
 
-- Current theme is stored in `.codex-theme` at repo root.
-- Cached candidate lists are stored in `.codex-cache/` for faster startup.
-- On macOS playback uses `afplay`; Linux fallback supports `paplay`, `aplay`, or `play`.
-- On macOS, if available, audio is auto-converted with `ffmpeg` and played via `afplay` for reliability.
-- The player prefers more "voice-like" clips (`voisel`, `voiseb`, `voisal`, `select`) and falls back to any clip in the theme if needed.
-- Rebuild cache manually with `./scripts/play-theme-sound.sh --refresh-cache`.
-- Troubleshoot with `CODEX_SOUND_DEBUG=1 ./scripts/play-theme-sound.sh`.
-
-## How it connects to Codex
-
-- It is **not** a server and there is no always-on daemon.
-- Native hook mode (recommended):
-  1. Codex emits `agent-turn-complete`
-  2. Codex runs `scripts/codex-notify.sh` with event JSON
-  3. hook script triggers themed playback
-- Optional wrapper mode:
-  - `scripts/codex-with-sound.sh` plays once when the whole Codex process exits.
-  - Useful if you want end-of-run sound only.
-
-## Troubleshooting
-
-- Check hook config:
-  - `grep '^notify' ~/.codex/config.toml`
-- Run diagnostics:
-  - `./scripts/doctor.sh --quick`
-- Re-run setup to repair config:
-  - `./scripts/setup.sh`
-- In your current shell, clear old alias overrides (if any):
-  - `unalias codex 2>/dev/null`
-- To capture playback errors to a log:
-  - `CODEX_SOUND_DEBUG=1 codex "test"`
-  - log file: `.codex-cache/playback.log`
+- Theme is stored in `.codex-theme`.
+- Cache/logs are in `.codex-cache/`.
+- macOS uses `afplay`; Linux supports `paplay`, `aplay`, or `play`.
+- For verbose playback troubleshooting: `CODEX_SOUND_DEBUG=1 ./scripts/play-theme-sound.sh`.
