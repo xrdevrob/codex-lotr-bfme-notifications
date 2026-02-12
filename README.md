@@ -17,36 +17,47 @@ LOTR/BFME themed completion sounds for Codex runs.
 - `scripts/codex-with-sound.sh` runs `codex "$@"` and then plays a completion sound
 - `scripts/doctor.sh` validates your local install and hook wiring
 
-## Simple setup (recommended)
+## Install (simple)
+
+1. Open a fresh terminal and go to this repo:
+
+```bash
+cd /Users/rob/Developer/codex-lotr-bfme-notifications
+```
+
+2. Run setup:
+
+```bash
+./scripts/setup.sh
+```
+
+If you see `permission denied`, run:
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/setup.sh
 ```
 
-`setup.sh` does the following:
+3. In the wizard:
+- Use Up/Down arrows
+- Press Enter to select
+- Pick a category (example: `ELVEN UNITS`)
+- Pick a voice folder (example: `Lorien Archers`)
+- Use `Back` if you want to return to category selection
 
-- Uses an interactive arrow-key picker (Up/Down + Enter)
-- Lets you choose a category (for example `ELVEN UNITS`) and then a final folder (for example `Lorien Archers`)
-- Lets you go back from the final folder list to the category list
-- Primes the local sound cache
-- Installs the Codex `notify` hook in `~/.codex/config.toml` (idempotent)
-
-Then just run Codex normally:
+4. Run Codex normally:
 
 ```bash
-codex "fix failing test in parser"
+codex "your prompt"
 ```
 
-No wrapper is required for normal use.
+No wrapper is required.
 
 ## Theme model
 
-- Preferred theme format is folder-based, for example:
+- Theme format is folder-based, for example:
   - `ELVEN UNITS/Lorien Archers`
   - `DWARVEN HEROES/Gimli`
-- Legacy aliases are still supported for compatibility:
-  - `elves`, `men`, `dwarves`, `aragorn`, `legolas`
 
 ## Change theme later
 
