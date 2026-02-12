@@ -22,7 +22,7 @@ LOTR/BFME themed completion sounds for Codex runs.
 1. Open a fresh terminal and go to this repo:
 
 ```bash
-cd /Users/rob/Developer/codex-lotr-bfme-notifications
+cd /path/to/codex-lotr-bfme-notifications
 ```
 
 2. Run setup:
@@ -64,7 +64,7 @@ No wrapper is required.
 From a fresh terminal:
 
 ```bash
-cd /Users/rob/Developer/codex-lotr-bfme-notifications
+cd /path/to/codex-lotr-bfme-notifications
 ./scripts/setup.sh
 ```
 
